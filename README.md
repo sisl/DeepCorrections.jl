@@ -11,7 +11,7 @@ This package implements the deep correction method [1] for solving reinforcement
 ## Installation 
 
 ```julia
-Pkg.clone() #TODO
+Pkg.clone("https://github.com/MaximeBouton/DeepCorrections.jl") #TODO
 ``` 
 
 ## Usage 
