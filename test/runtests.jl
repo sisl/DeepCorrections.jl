@@ -6,9 +6,10 @@ include(test_env_path)
 
 rng = MersenneTwister(1)
 mdp = TestMDP((5,5), 4, 6)
-solver = DeepCorrectionSolver(max_steps=20000, lr=0.005, eval_freq=2000,num_ep_eval=100,
+solver = DeepCorrectionSolver(correction_network=QNetworkArchitecture(fc=[8, 16]), 
+                            max_steps=20000, lr=0.005, eval_freq=2000,num_ep_eval=100,
                             save_freq = 2000, log_freq = 500,
-                            double_q = false, dueling=false, rng=rng)
+                            double_q = true, dueling=true, rng=rng)
 
 pol = solve(solver, mdp)
 
@@ -24,13 +25,18 @@ function vi_values(mdp::GridWorld, s::Array{Float64})
     return vi_pol.qmat[si, :]
 end
 solver.lowfi_values = vi_values
-solver.correction = multiplicative_correction
+solver.correction = additive_correction
 solver.dqn.eps_fraction = 0. 
 solver.dqn.eps_end = 0.01
-solver.dqn.max_steps = 400000
+solver.dqn.max_steps = 80000
 
 corr_pol = solve(solver, mdp)
 
-
-
-
+s = rand(states(mdp))
+o = convert_s(Vector{Float64}, s, mdp)
+o_batch = reshape(o, (1, size(o)...))
+q_corr = run(corr_pol.sess, corr_pol.q, Dict(corr_pol.s => o_batch))
+q_vi = vi_pol.qmat[state_index(mdp, s), :]
+println(q_corr)
+println(q_vi)
+println(q_vi[:] + q_corr[:])
