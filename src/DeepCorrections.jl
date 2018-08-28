@@ -109,7 +109,7 @@ end
 combine the output from the corrective network and the low fidelity values 
 """
 function correction end 
-correction(f::Function, problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) = f(problem, q_lo, q_corr, weight) where Q <:Union{Array{Float64}, Tensor}
+correction(f::Function, problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) where Q <:Union{Array{Float64}, Tensor} = f(problem, q_lo, q_corr, weight) 
 
 # default implementation 
 function additive_correction(problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) where Q <:Union{Array{Float64}, Tensor}
