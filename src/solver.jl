@@ -69,6 +69,7 @@ function get_q_lo_batch(graph::CorrectionTrainGraph, env::AbstractEnvironment, s
 end
 
 function batch_train!(graph::CorrectionTrainGraph, s_batch, a_batch, r_batch, sp_batch, done_batch, weights, q_lo_batch, q_lo_p_batch)
+    tf.set_def_graph(graph.sess.graph)
     feed_dict = Dict(graph.s => s_batch,
                     graph.a => a_batch,
                     graph.sp => sp_batch,
