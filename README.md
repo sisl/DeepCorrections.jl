@@ -50,4 +50,8 @@ Two default correction methods are available:
 
 An additional constant weight can be used in the correction method using the option `correction_weight` in the solver. The user can write its own correction method via the `correction_method` option. It can be a function or an object. If this is a function `f`, `f(mdp, q_lo, q_corr, correction_weight)` will be called to estimate the value. If this is an object `o`, `correction(o, mdp, q_lo, q_corr, correction_weight)` will be called.
 
+The underlying implementation relies on tensorflow and static graphs, the correction method implemented must support tensor inputs and be tensorflow friendly. The signature should look like this: 
+```julia 
+    multiplicative_correction(problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) where Q <:Union{Array{Float64}, Tensor}
+```
 
