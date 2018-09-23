@@ -115,7 +115,7 @@ correction(f::Function, problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::
 
 # default implementation 
 function additive_correction(problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) where Q <:Union{AbstractArray, Tensor}
-    return q_lo + q_corr
+    return q_lo + weight*q_corr
 end
 
 function multiplicative_correction(problem::Union{POMDP, MDP}, q_lo::Q, q_corr::Q, weight::Float64) where Q <:Union{AbstractArray, Tensor}
