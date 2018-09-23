@@ -27,10 +27,10 @@ function vi_values(mdp::GridWorld, s::Array{Float64})
     return vi_pol.qmat[si, :]
 end
 solver.lowfi_values = vi_values
-solver.correction = multiplicative_correction
-solver.dqn.eps_fraction = 0. 
+solver.correction = additive_correction
+solver.dqn.eps_fraction = 0.1 
 solver.dqn.eps_end = 0.01
-solver.dqn.max_steps = 20000
+solver.dqn.max_steps = 40000
 
 corr_pol = solve(solver, mdp)
 
