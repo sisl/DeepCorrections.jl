@@ -1,5 +1,10 @@
-using DeepCorrections, POMDPModels, DeepQLearning
+using DeepCorrections
+using POMDPs
+using POMDPModels
+using DeepQLearning
 using Base.Test
+POMDPs.add("DiscreteValueIteration")
+using DiscreteValueIteration
 
 test_env_path = joinpath(Pkg.dir(), "DeepQLearning", "test", "test_env.jl")
 include(test_env_path)
@@ -17,7 +22,6 @@ corr_pol = solve(solver, mdp)
 
 
 # value table 
-using DiscreteValueIteration
 mdp = GridWorld()
 vi_pol = solve(ValueIterationSolver(), mdp)
 
