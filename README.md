@@ -1,8 +1,8 @@
 # DeepCorrections
 
-[![Build Status](https://travis-ci.org/MaximeBouton/DeepCorrections.jl.svg?branch=master)](https://travis-ci.org/MaximeBouton/DeepCorrections.jl)
+[![Build Status](https://travis-ci.org/sisl/DeepCorrections.jl.svg?branch=master)](https://travis-ci.org/sisl/DeepCorrections.jl)
 
-[![Coverage Status](https://coveralls.io/repos/MaximeBouton/DeepCorrections.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/MaximeBouton/DeepCorrections.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/sisl/DeepCorrections.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sisl/DeepCorrections.jl?branch=master)
 
 This package implements the deep correction method [1] for solving reinforcement learning problems. The user should define the problem according to the [POMDPs.jl](https://github.com/JuliaPOMDP/POMDPs.jl) interface. 
 
@@ -11,7 +11,7 @@ This package implements the deep correction method [1] for solving reinforcement
 ## Installation 
 
 ```julia
-Pkg.clone("https://github.com/MaximeBouton/DeepCorrections.jl") #TODO
+Pkg.clone("https://github.com/sisl/DeepCorrections.jl") 
 ``` 
 
 ## Usage 
