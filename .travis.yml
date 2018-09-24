@@ -8,6 +8,10 @@ julia:
 
 notifications:
   email: false
+addons:
+  apt:
+    packages:
+    - hdf5-tools
 git:
   depth: 99999999
 
