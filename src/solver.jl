@@ -1,84 +1,92 @@
 function POMDPs.solve(solver::DeepCorrectionSolver, problem::MDP)
     env = MDPEnvironment(problem, rng=solver.dqn.rng)
-    #init session and build graph Create a TrainGraph object with all the tensors
+    return solve(solver, env)
+end
+
+function POMDPs.solve(solver::DeepCorrectionSolver, problem::POMDP)
+    env = POMDPEnvironment(problem, rng=solver.dqn.rng)
     return solve(solver, env)
 end
 
 function POMDPs.solve(solver::DeepCorrectionSolver, env::AbstractEnvironment)
-    train_graph = build_graph(solver, env)
-
-    # init and populate replay buffer
-    if solver.dqn.prioritized_replay
-        replay = PrioritizedReplayBuffer(env, solver.dqn.buffer_size, solver.dqn.batch_size)
+    # check reccurence 
+    if isrecurrent(solver.dqn.qnetwork) && !solver.dqn.recurrence
+        throw("DeepQLearningError: you passed in a recurrent model but recurrence is set to false")
+    end
+    replay = initialize_replay_buffer(solver.dqn, env)
+    if solver.dqn.dueling 
+        active_q = create_dueling_network(solver.dqn.qnetwork)
+        solver.dqn.qnetwork = active_q
     else
-        replay = ReplayBuffer(env, solver.dqn.buffer_size, solver.dqn.batch_size)
+        active_q = solver.dqn.qnetwork
     end
-    populate_replay_buffer!(replay, env, max_pop=solver.dqn.train_start)
-    # init variables
-    run(train_graph.sess, global_variables_initializer())
-    # train model
-    policy = DeepCorrectionPolicy(train_graph.q, train_graph.s, solver.lowfi_values, solver.correction, solver.correction_weight,
-                                  env, train_graph.sess)
-    dqn_train(solver.dqn, env, train_graph, policy, replay)
-    return policy
+    correction_network = NNPolicy(env.problem, active_q, ordered_actions(env.problem), length(obs_dimensions(env)))
+    policy = DeepCorrectionPolicy(env.problem, correction_network, solver.lowfi_values, solver.correction, solver.correction_weight, ordered_actions(env.problem))
+    return dqn_train!(solver.dqn, env, policy, replay)
 end
 
-function DeepQLearning.get_action!(policy::DeepCorrectionPolicy, o::Array{Float64})
-    # cannot take a batch of observations
-    q_low = lowfi_values(policy.lowfi_values, policy.env.problem, o)
-    q_low = reshape(q_low, (1, length(q_low)))
-    o_batch = reshape(o, (1, size(o)...))
-    TensorFlow.set_def_graph(policy.sess.graph)
-    q_tf = run(policy.sess, policy.q, Dict(policy.s => o_batch))
-    q_corr = convert(Array{Float64}, q_tf)
-    q_val = correction(policy.correction, policy.env.problem, q_low, q_corr, policy.correction_weight)
-    ai = indmax(q_val)
-    return actions(policy.env)[ai]
-end
-
-function DeepQLearning.get_action(policy::DeepCorrectionPolicy, o::Array{Float64})
-    return get_action!(policy, o)
-end
-
-function DeepQLearning.reset_hidden_state!(policy::DeepCorrectionPolicy)
-    # no hidden states
-end
-
-function batch_train!(env::AbstractEnvironment, graph::CorrectionTrainGraph, replay::ReplayBuffer)
-    weights = ones(replay.batch_size)
-    s_batch, a_batch, r_batch, sp_batch, done_batch = sample(replay)
-    q_lo_batch, q_lo_p_batch = get_q_lo_batch(graph, env, s_batch, sp_batch)
-    return batch_train!(graph, s_batch, a_batch, r_batch, sp_batch, done_batch, weights, q_lo_batch, q_lo_p_batch)
-end
-
-function batch_train!(env::AbstractEnvironment, graph::CorrectionTrainGraph, replay::PrioritizedReplayBuffer)
+function DeepQLearning.batch_train!(solver::DeepQLearningSolver,
+                      env::AbstractEnvironment,
+                      policy::DeepCorrectionPolicy,
+                      optimizer, 
+                      target_q,
+                      replay::PrioritizedReplayBuffer)
     s_batch, a_batch, r_batch, sp_batch, done_batch, indices, weights = sample(replay)
-    q_lo_batch, q_lo_p_batch = get_q_lo_batch(graph, env, s_batch, sp_batch)
-    return batch_train!(graph, s_batch, a_batch, r_batch, sp_batch, done_batch, weights, q_lo_batch, q_lo_p_batch)
+    loss_val, td_vals, grad_norm = batch_train!(solver, env, policy, optimizer, target_q, s_batch, a_batch, r_batch, sp_batch, done_batch, weights)
+    update_priorities!(replay, indices, td_vals)
+    return loss_val, td_vals, grad_norm
 end
 
-function get_q_lo_batch(graph::CorrectionTrainGraph, env::AbstractEnvironment, s_batch, sp_batch)
-    bs = size(s_batch, 1)
-    q_lo_batch = zeros(bs, n_actions(env))
-    q_lo_p_batch = zeros(bs, n_actions(env))
-    for i=1:bs
-        q_lo_batch[i, :] = lowfi_values(graph.lowfi_values, env.problem, reshape(s_batch, bs, :)[i, :])
-        q_lo_p_batch[i, :] = lowfi_values(graph.lowfi_values, env.problem, reshape(sp_batch, bs, :)[i, :])
+function DeepQLearning.batch_train!(solver::DeepQLearningSolver,
+                      env::AbstractEnvironment,
+                      policy::DeepCorrectionPolicy,
+                      optimizer,
+                      target_q,
+                      s_batch, a_batch, r_batch, sp_batch, done_batch, importance_weights)
+    active_q = solver.qnetwork
+    loss_tracked, td_tracked = deep_correction_loss(solver, env, policy, active_q, target_q, s_batch, a_batch, r_batch, sp_batch, done_batch, importance_weights)
+    loss_val = loss_tracked.data
+    td_vals = Flux.data(td_tracked)
+    p = params(active_q)
+    Flux.train!(x->x, p, [(loss_tracked, )], optimizer)
+    grad_norm = globalnorm(p)
+    return loss_val, td_vals, grad_norm
+end
+
+function deep_correction_loss(solver::DeepQLearningSolver, 
+                              env::AbstractEnvironment, 
+                              policy::DeepCorrectionPolicy,
+                              active_q,
+                              target_q,
+                              s_batch, a_batch, r_batch, sp_batch, done_batch, importance_weights)
+    q_corr = active_q(s_batch)
+    q_corr_sa = diag(view(q_corr, a_batch, :))
+    q_lo = get_qlo_batch(solver, policy, env, s_batch)
+    q_lo_sa = diag(view(q_lo, a_batch, :))
+    q_sa = correction(policy.correction, env.problem, q_lo_sa, q_corr_sa, policy.correction_weight)
+    q_lo_p = get_qlo_batch(solver, policy, env, sp_batch)
+    if solver.double_q
+        target_q_corr = target_q(sp_batch)
+        q_sp = correction(policy.correction, env.problem, q_lo_p, target_q_corr, policy.correction_weight)
+        qp_corr_p = active_q(sp_batch)
+        qp_values = correction(policy.correction, env.problem, q_lo_p, qp_corr_p, policy.correction_weight)
+        best_a = Flux.onecold(qp_values)
+        q_sp_max = diag(view(q_sp, best_a, :))
+    else
+        target_q_corr = target_q(sp_batch)
+        q_sp = correction(policy.correction, env.problem, q_lo_p, target_q_corr, policy.correction_weight)
+        q_sp_max = @view maximum(q_sp, dims=1)[:]
     end
-    return q_lo_batch, q_lo_p_batch 
-end
+    q_targets = r_batch .+ convert(Vector{Float32}, (1.0 .- done_batch).*discount(env.problem)).*q_sp_max 
+    td_tracked = q_sa .- q_targets
+    loss_tracked = mean(huber_loss, importance_weights.*td_tracked)
+    return loss_tracked, td_tracked
+end 
 
-function batch_train!(graph::CorrectionTrainGraph, s_batch, a_batch, r_batch, sp_batch, done_batch, weights, q_lo_batch, q_lo_p_batch)
-    tf.set_def_graph(graph.sess.graph)
-    feed_dict = Dict(graph.s => s_batch,
-                    graph.a => a_batch,
-                    graph.sp => sp_batch,
-                    graph.r => r_batch,
-                    graph.done_mask => done_batch,
-                    graph.importance_weights => weights,
-                    graph.q_lo => q_lo_batch,
-                    graph.q_lo_p => q_lo_p_batch)
-    loss_val, td_errors, grad_val, _ = run(graph.sess,[graph.loss, graph.td_errors, graph.grad_norm, graph.train_op],
-                                feed_dict)
-    return (loss_val, td_errors, grad_val)
+function get_qlo_batch(solver::DeepQLearningSolver, policy::DeepCorrectionPolicy, env::AbstractEnvironment, s_batch::AbstractArray)
+    q_lo = zeros(n_actions(env), solver.batch_size)
+    for i=1:solver.batch_size
+        q_lo[:, i] = lowfi_values(policy.lowfi_values, env.problem, view(s_batch,axes(s_batch)[1:end-1]...,i))
+    end
+    return q_lo
 end
