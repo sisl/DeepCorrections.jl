@@ -4,6 +4,8 @@
 
 [![Coverage Status](https://coveralls.io/repos/sisl/DeepCorrections.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sisl/DeepCorrections.jl?branch=master)
 
+[![codecov.io](http://codecov.io/github/sisl/DeepCorrections.jl/coverage.svg?branch=master)](http://codecov.io/github/sisl/DeepCorrections.jl?branch=master)
+
 This package implements the deep correction method [1] for solving reinforcement learning problems. The user should define the problem according to the [POMDPs.jl](https://github.com/JuliaPOMDP/POMDPs.jl) interface. 
 
 [1] M. Bouton, K. Julian, A. Nakhaei, K. Fujimura, and M. J. Kochenderfer, “Utility decomposition with deep corrections for scalable planning under uncertainty,” in International Conference on Autonomous Agents and Multiagent Systems (AAMAS), 2018. 
@@ -11,22 +13,31 @@ This package implements the deep correction method [1] for solving reinforcement
 ## Installation 
 
 ```julia
-Pkg.clone("https://github.com/sisl/DeepCorrections.jl") 
+using Pkg
+Pkg.add("POMDPs")
+POMDPs.add_registry() # to get DeepQLearning, and RLInterface
+Pkg.add(PackageSpec(url="https://github.com/sisl/DeepCorrections.jl"))
 ``` 
 
 ## Usage 
 
 ```julia 
+using POMDPs
 using DeepCorrections
-problem = MyMDP()
+using Flux # for model definition
+using DeepQLearning # for underlying DQN solver
+using POMDPModels # for gridworld
 
-function my_low_fidelity_values(problem::MyMDP, s)
+mdp = SimpleGridWorld()
+
+function my_low_fidelity_values(problem::SimpleGridWorld, s)
     return ones(n_actions(problem)) # dummy example, should return an action value vector 
 end
 
-solver = DeepCorrectionSolver(correction_network = QNetworkArchitecture(fc=[8, 8]),
-                              lowfi_values = my_low_fidelity_values,
-                              lr = 0.001) # learning rate
+model = Chain(Dense(2, 32, relu), Dense(32, n_actions(mdp))) # input is 2 dimensional, x,y positions in grid world
+dqn_solver = DeepQLearningSolver(qnetwork = model, verbose=true) # see DQN docs for all the parameters
+solver = DeepCorrectionSolver(dqn = dqn_solver,
+                              lowfi_values = my_low_fidelity_values)
 
 policy = solve(solver, problem)
 ``` 

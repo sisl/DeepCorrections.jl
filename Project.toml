@@ -1,0 +1,24 @@
+name = "DeepCorrections"
+uuid = "658c41d1-afff-526d-a519-26c1370c8411"
+repo = "https://github.com/sisl/DeepCorrections.jl"
+version = "0.0.0"
+
+[deps]
+DeepQLearning = "de0a67f4-c691-11e8-0034-5fc6e16e22d3"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+POMDPModelTools = "08074719-1b2a-587c-a292-00f91cc44415"
+POMDPPolicies = "182e52fb-cfd0-5e46-8c26-fd0667c990f4"
+POMDPs = "a93abf59-7444-517b-a68a-c42f96afdd7d"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+RLInterface = "3065fe53-3878-5aed-aae7-ab641be43734"
+
+[extras]
+DiscreteValueIteration = "4b033969-44f6-5439-a48b-c11fa3648068"
+POMDPModels = "355abbd5-f08e-5560-ac9e-8b5f2592a0ca"
+POMDPSimulators = "e0d0a172-29c6-5d4e-96d0-f262df5d01fd"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["DiscreteValueIteration", "POMDPModels", "POMDPSimulators", "Random", "Test"]
