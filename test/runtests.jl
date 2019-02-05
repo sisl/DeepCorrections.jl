@@ -63,3 +63,25 @@ end
     r_gw =  evaluate(mdp, corr_policy, rng)
     @test r_gw >= 0.
 end
+
+@testset begin "Use Policy for Lowfi Values"
+        # set random seed for test block
+    Random.seed!(2)
+    rng = MersenneTwister(2)
+    # value table 
+    mdp = SimpleGridWorld()
+    vi_pol = solve(ValueIterationSolver(), mdp)
+    POMDPs.stateindex(mdp::SimpleGridWorld, s::AbstractArray) = stateindex(mdp, convert(Vector{Int64}, s))
+    model = Chain(x->flattenbatch(x), Dense(2, 32, relu), Dense(32, n_actions(mdp)))
+    dqn_solver = DeepQLearningSolver(qnetwork = model, prioritized_replay=true, max_steps=40_000, learning_rate=0.01,
+                                     log_freq=1000, eval_freq = 2000,
+                                     eps_fraction = 0.1, eps_end = 0.01,
+                                     double_q=true, dueling=true, rng=rng)
+    solver = DeepCorrectionSolver(dqn = dqn_solver, 
+                                  lowfi_values = vi_pol, 
+                                  correction = additive_correction)
+
+    corr_policy = solve(solver, mdp)
+    r_gw =  evaluate(mdp, corr_policy, rng)
+    @test r_gw >= 0.
+end

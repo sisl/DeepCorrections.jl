@@ -53,7 +53,7 @@ the actions are ordered according to `action_index`
 """
 function lowfi_values end
 lowfi_values(f::Function, problem::Union{POMDP,MDP}, s) = f(problem, s)
-
+lowfi_values(p::Policy, problem::Union{POMDP, MDP}, s) = actionvalues(p, s)
 
 # default implementation
 # should return a vector of size n_actions

@@ -50,8 +50,8 @@ The type `DeepCorrectionSolver` relies on the `DeepQLearningSolver` type defined
 
 **Low fidelity value estimation:**
 
-To provide the low fidelity value function to the solver the user can use the `lowfi_values` in the constructor. It can be a function or an object. If this is a function `f`, `f(mdp, s)` will be called to estimate the value. If this is an object `o`, `lowfi_values(o, mdp, s, depth)` will be called.
-The output should be a vector of size `n_actions(mdp)`. The actions are ordered accoring to the function `action_index` implemented by the problem writer.
+To provide the low fidelity value function to the solver the user can use the `lowfi_values` option specify when initializing the solver. It can be a function or a policy. If this is a function `f`, `f(mdp, s)` will be called to estimate the value. If this is a policy, `actionvalues(policy, s)` will be called. See the documentation in `POMDPPolicies` for more details on `actionvalues`.
+The output should be a vector of size `n_actions(mdp)`. The actions are assumed to be ordered according to the function `action_index` implemented by the problem writer.
 
 **Correction method:**
 
