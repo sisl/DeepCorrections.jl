@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/sisl/DeepCorrections.jl.svg?branch=master)](https://travis-ci.org/sisl/DeepCorrections.jl)
 
-[![Coverage Status](https://coveralls.io/repos/sisl/DeepCorrections.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sisl/DeepCorrections.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/sisl/DeepCorrections.jl/badge.svg?branch=master)](https://coveralls.io/github/sisl/DeepCorrections.jl?branch=master)
 
 [![codecov.io](http://codecov.io/github/sisl/DeepCorrections.jl/coverage.svg?branch=master)](http://codecov.io/github/sisl/DeepCorrections.jl?branch=master)
 
