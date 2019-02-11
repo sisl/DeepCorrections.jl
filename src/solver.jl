@@ -84,7 +84,7 @@ function deep_correction_loss(solver::DeepQLearningSolver,
 end 
 
 function get_qlo_batch(solver::DeepQLearningSolver, policy::DeepCorrectionPolicy, env::AbstractEnvironment, s_batch::AbstractArray)
-    q_lo = zeros(n_actions(env), solver.batch_size)
+    q_lo = zeros(Float32, n_actions(env), solver.batch_size)
     for i=1:solver.batch_size
         q_lo[:, i] = lowfi_values(policy.lowfi_values, env.problem, view(s_batch,axes(s_batch)[1:end-1]...,i))
     end
