@@ -50,7 +50,7 @@ function DeepQLearning.batch_train!(solver::DeepQLearningSolver,
     p = params(active_q)
     Flux.back!(loss_tracked)
     grad_norm = globalnorm(p)
-    Flux._update_params!(optimizer, p)
+    Flux.Optimise._update_params!(optimizer, p)
     return loss_val, td_vals, grad_norm
 end
 
